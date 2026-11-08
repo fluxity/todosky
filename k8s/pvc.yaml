@@ -1,0 +1,14 @@
+# Holds todosky.db, the links between Todoist tasks and Skylight chores.
+# Losing it makes the next sync push every matching task again as duplicates.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: todosky-data
+  namespace: default
+  labels:
+    app: todosky
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 100Mi

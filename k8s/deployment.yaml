@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todosky
+  namespace: default
+  labels:
+    app: todosky
+spec:
+  # Exactly one copy may sync at a time, so never run old and new pods together.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: todosky
+  template:
+    metadata:
+      labels:
+        app: todosky
+    spec:
+      # Same node as todopaper. The local-path volume is tied to the node the pod first runs on.
+      nodeSelector:
+        kubernetes.io/hostname: raspberrypi
+      containers:
+        - name: todosky
+          image: 381092307294.dkr.ecr.us-east-1.amazonaws.com/todosky:latest
+          args: ["python", "-m", "todosky", "run"]
+          envFrom:
+            - secretRef:
+                name: todosky
+          env:
+            # Overrides any STATE_PATH in the secret so state always lands on the volume.
+            - name: STATE_PATH
+              value: /data/todosky.db
+            # Timed Todoist tasks are shown on Skylight at this zone's local time.
+            - name: TZ
+              value: America/New_York
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 10m
+              memory: 48Mi
+            limits:
+              memory: 192Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: todosky-data
+      imagePullSecrets:
+        - name: ecr-push-cred

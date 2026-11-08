@@ -1,0 +1,40 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: todosky
+build:
+  local:
+    push: true
+  # The cluster has amd64 nodes and a 32-bit ARM Raspberry Pi.
+  platforms: ["linux/amd64", "linux/arm/v7"]
+  tagPolicy:
+    envTemplate:
+      template: "{{.IMAGE_NAME}}:latest"
+  artifacts:
+    - image: 381092307294.dkr.ecr.us-east-1.amazonaws.com/todosky
+      context: .
+      docker:
+        dockerfile: Dockerfile
+      # ECR auth tokens expire after 12h, so log in on every build.
+      hooks:
+        before:
+          - command:
+              - sh
+              - -c
+              - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 381092307294.dkr.ecr.us-east-1.amazonaws.com
+            os: [darwin, linux]
+manifests:
+  rawYaml:
+    - k8s/pvc.yaml
+    - k8s/deployment.yaml
+deploy:
+  kubectl:
+    hooks:
+      before:
+        # Credentials come from the local .env (never committed). Re-applied on every deploy.
+        - host:
+            command:
+              - sh
+              - -c
+              - test -f .env || { echo ".env is missing; copy .env.example and fill it in" >&2; exit 1; }; kubectl create secret generic todosky --from-env-file=.env --dry-run=client -o yaml | kubectl apply -f -
+            os: [darwin, linux]

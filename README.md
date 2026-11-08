@@ -37,6 +37,21 @@ docker logs -f todosky
 - The state file lives on the `todosky-data` volume, so it survives restarts and upgrades. Don't remove the volume (see the warning about `todosky.db` above).
 - Run only one copy of the sync at a time, either locally or in Docker. Two copies with separate state files will push duplicate chores. To move an existing local `todosky.db` into Docker, copy it onto the volume before the first start: `docker run --rm -v todosky-data:/data -v "$PWD":/src todosky cp /src/todosky.db /data/`.
 
+## Kubernetes (k3s)
+
+Deployed with Skaffold, in the same way as todopaper: the image is built for `linux/amd64` and `linux/arm/v7`, pushed to ECR (`381092307294.dkr.ecr.us-east-1.amazonaws.com/todosky:latest`), and pulled with the `ecr-push-cred` secret that todopaper's `ecr-secret-refresher` CronJob keeps fresh in `default`.
+
+```bash
+skaffold run
+```
+
+- Needs `docker` and `kubectl` working in the shell that runs Skaffold, plus AWS credentials for the ECR login hook.
+- Before deploying, Skaffold creates or updates the `todosky` Secret from your local `.env`. Edit `.env` and run `skaffold run` again to change credentials or settings.
+- State is kept on the `todosky-data` PersistentVolumeClaim (k3s `local-path`), so the pod stays on the node where the volume was first created. The deployment uses `Recreate`, so old and new pods never sync at the same time.
+- Stop any local or Docker copy before deploying, or chores get pushed twice.
+- Logs: `kubectl logs -f deploy/todosky`
+- If the build fails at the end with `DENIED: Your authorization token has expired`, run `skaffold run` again. Skaffold reads the stored ECR token before its login hook replaces it, so the first run after 12 hours can fail.
+
 ## Tests
 
 ```bash

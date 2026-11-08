@@ -63,6 +63,10 @@ async def cmd_once(config: Config, dry_run: bool) -> None:
 
 async def cmd_run(config: Config) -> None:
     async with make_syncer(config) as syncer:
+        _LOGGER.info(
+            "Syncing %r to Skylight profile %r every %ds",
+            config.todoist_filter, config.skylight_category, config.poll_seconds,
+        )
         delay = config.poll_seconds
         while True:
             try:
