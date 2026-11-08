@@ -29,10 +29,13 @@ State (links between tasks and chores, Skylight tokens) is kept in `todosky.db`.
 
 ```bash
 docker build -t todosky .
-docker run -d --name todosky --restart unless-stopped --env-file .env -e TZ=America/Chicago -v todosky-data:/data todosky
+docker run -d --name todosky --restart unless-stopped --env-file .env -e TZ=America/New_York -v todosky-data:/data todosky
+docker logs -f todosky
 ```
 
-Set `TZ` to your local zone: timed Todoist tasks are shown at the local time of the machine running the sync.
+- Set `TZ` to your local zone: timed Todoist tasks are shown at the local time of the machine running the sync.
+- The state file lives on the `todosky-data` volume, so it survives restarts and upgrades. Don't remove the volume (see the warning about `todosky.db` above).
+- Run only one copy of the sync at a time, either locally or in Docker. Two copies with separate state files will push duplicate chores. To move an existing local `todosky.db` into Docker, copy it onto the volume before the first start: `docker run --rm -v todosky-data:/data -v "$PWD":/src todosky cp /src/todosky.db /data/`.
 
 ## Tests
 
